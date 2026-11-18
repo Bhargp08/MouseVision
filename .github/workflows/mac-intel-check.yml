@@ -5,6 +5,9 @@ name: mac-intel-check
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   install:
     name: torch + allensdk on Intel macOS
