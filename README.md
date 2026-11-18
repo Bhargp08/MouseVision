@@ -102,6 +102,21 @@ opposite direction. Responses are mean dF/F over `[start+4, end+4)` frames minus
 Receptive fields are spike-triggered averages of z-scored responses over locally sparse
 noise trials; significance compares the max-pixel z against shuffled trial labels.
 
+## Encoding & hierarchy
+
+```bash
+uv run python scripts/run_encoding.py
+```
+
+Ridge regression from 2x2-pooled ResNet-18 layer activations to each neuron's
+image-mean response, with the feature scaler, the PCA (50 components) and the per-neuron
+ridge alpha (inner 5-fold) all fit inside the outer folds. Neurons are kept when their
+split-half ceiling is at least 0.3. R^2 is reported both raw and as a fraction of that
+ceiling (`r2/ceiling`). Per-area layer centroids are
+`sum(i * max(s_i, 0)) / sum(max(s_i, 0))` over layers 1..4, tested against the assumed
+anatomical order `VISp, VISl, VISrl, VISal, VISpm, VISam` with an exact permutation test
+over all 720 orderings (one-sided, identity included).
+
 ## Citation
 
 Allen Institute for Brain Science. Allen Brain Observatory — Visual Coding 2-photon.

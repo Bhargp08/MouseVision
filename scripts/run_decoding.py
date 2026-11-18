@@ -118,16 +118,43 @@ def main(argv=None):
                 "n_cells": int(X.shape[1]),
                 "acc_all": float(all_cells),
                 "acc_at_common_n": float(observed),
-                "common_n": int(common_n),
                 "perm_p": float(p_value),
                 "participation_ratio": float(geometry["participation_ratio"]),
             }
         )
 
-    pd.concat(curves.values(), keys=curves.keys(), names=["area"]).reset_index(
-        level=0
+    # Column names are fixed by the app contract.
+    curve_rows = []
+    for area, frame in curves.items():
+        grouped = frame.groupby("n_neurons")["accuracy"]
+        mean = grouped.mean()
+        interval = 1.96 * grouped.std(ddof=1) / np.sqrt(grouped.count())
+        for n_neurons in mean.index:
+            curve_rows.append(
+                {
+                    "area": area,
+                    "n_cells": int(n_neurons),
+                    "acc_mean": float(mean.loc[n_neurons]),
+                    "acc_lo": float((mean - interval).loc[n_neurons]),
+                    "acc_hi": float((mean + interval).loc[n_neurons]),
+                    "chance": CHANCE,
+                }
+            )
+    pd.DataFrame(
+        curve_rows, columns=["area", "n_cells", "acc_mean", "acc_lo", "acc_hi", "chance"]
     ).to_csv(RESULTS_DIR / "decoding_curve.csv", index=False)
-    summary_frame = pd.DataFrame(summary)
+
+    summary_frame = pd.DataFrame(
+        summary,
+        columns=[
+            "area",
+            "n_cells",
+            "acc_all",
+            "acc_at_common_n",
+            "perm_p",
+            "participation_ratio",
+        ],
+    )
     summary_frame.to_csv(RESULTS_DIR / "decoding_summary.csv", index=False)
 
     plot_curves(curves, FIGURES_DIR / "decoding_vs_n.png")
