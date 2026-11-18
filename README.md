@@ -1,123 +1,163 @@
 # MouseVision
 
-Encoding and decoding mouse visual cortex activity from the Allen Brain Observatory
-(Visual Coding 2-photon) and comparing it with layers of a convolutional neural
-network. This repo is currently at MV-00 only: scaffold, pinned environment, CI and
-data-cache configuration. No analysis code yet.
+Encoding and decoding mouse visual cortex activity from the Allen Brain Observatory, and
+comparing those population codes with the layers of a convolutional neural network.
+
+The question: when a mouse sees a natural image, how much of a visual area's response
+can be predicted from a CNN layer, and does that match the anatomical hierarchy of
+visual areas? MouseVision extracts per-trial dF/F responses to drifting gratings,
+locally sparse noise and 118 natural scenes from six visual areas of one Cre line, then
+measures tuning, receptive fields, decoding accuracy, representational similarity (RSA)
+and ridge-encoding performance against ResNet-18 layers, always relative to a
+split-half noise ceiling.
+
+## Data
+
+Allen Brain Observatory, Visual Coding 2-photon (public; no API key):
+
+- Cre line `Cux2-CreERT2`, imaging depth 175 um.
+- Areas: VISp, VISl, VISal, VISpm, VISam, VISrl.
+- 8 core experiments (~3.2 GB): natural scenes in all six areas, drifting gratings and
+  locally sparse noise in VISp. The exact ids live in `configs/subset.toml`.
+
+Raw and interim data stay out of git: `data/raw/` and `data/interim/` are gitignored.
+Point them elsewhere with `MV_DATA_DIR` (the cache then lives at
+`$MV_DATA_DIR/raw/allen_cache`). Small derived files under `data/features/` and
+`results/` are committed.
 
 ## Setup
 
 Requires [uv](https://docs.astral.sh/uv/). Python 3.11 is pinned in `.python-version`.
 
-Core environment (no torch):
-
 ```bash
-uv sync --locked --group dev
+uv sync --locked --group dev              # core: allensdk stack, no torch
+uv sync --locked --group dev --extra cnn  # adds torch 2.2.2 + torchvision 0.17.2
 ```
 
-Adds torch 2.2.2 + torchvision 0.17.2: macOS Intel (x86_64) wheels on darwin, CPU-only
-wheels on linux; needed only for MV-04 feature extraction:
+The `cnn` extra uses macOS Intel (x86_64) wheels on darwin and CPU-only wheels on linux;
+it is needed only for the ResNet-18 feature cache. CI never installs it.
 
 ```bash
-uv sync --locked --group dev --extra cnn
+uv run pytest -m "not slow"   # fast synthetic suite, no network, no NWB files
+uv run ruff check .
 ```
 
-## Test
+Slow tests (`-m slow`) use real cached data and skip when a file is missing.
+
+## Reproduce
 
 ```bash
-uv run pytest -m "not slow"
+# 1. download the frozen subset (idempotent; --dry-run to preview)
+uv run python scripts/download.py
+
+# 2. per-trial responses -> data/interim/responses/*.npz (8 files)
+uv run python scripts/build_responses.py
+
+# 3. tuning curves, OSI/DSI, receptive fields
+uv run python scripts/run_tuning_rf.py
+
+# 4. decoding accuracy vs neuron count, RSA-free PCA geometry
+uv run python scripts/run_decoding.py
+
+# 5. ResNet-18 features (once, on the Intel Mac, with the cnn extra)
+uv run python scripts/extract_features.py
+
+# 6. RSA per area x layer with noise ceilings
+uv run python scripts/run_rsa.py
+
+# 7. ridge encoding and the layer-area hierarchy test
+uv run python scripts/run_encoding.py
+
+# 8. regenerate the figure set from results/
+uv run python scripts/make_figures.py
+
+# 9. explore everything in the browser app
+uv run streamlit run app/streamlit_app.py
 ```
 
-`slow` is reserved for tests that need network access or a populated Allen cache; CI
-runs only the fast subset. Lint with `uv run ruff check .`.
+## Results
 
-## Data
+Every script above writes small, committed outputs (schema fixed so the app can read
+them):
 
-Raw Allen data (NWB/HDF5 plus the SDK cache) goes to `data/raw/`, which is gitignored —
-it never enters git. Point it somewhere else (an external drive, for example) with:
+| File | Contents |
+| --- | --- |
+| `results/tuning_VISp.npz` | `cell_ids, M, osi, dsi, pref_dir, pref_tf, responsive` |
+| `results/rf_VISp.npz` | `cell_ids, z_on, z_off, sig_on, sig_off` |
+| `results/decoding_curve.csv` | `area, n_cells, acc_mean, acc_lo, acc_hi, chance` |
+| `results/decoding_summary.csv` | `area, n_cells, acc_all, acc_at_common_n, perm_p, participation_ratio` |
+| `results/rsa.csv` | `area, layer, rho, ceiling, rho_over_ceiling, p` |
+| `results/encoding.csv` | `area, layer, r2, ceiling, r2_over_ceiling` |
+| `results/hierarchy.json` | `{"encoding": {"rho", "p", "centroids"}, "rsa": {...}}` |
 
-```bash
-export MV_DATA_DIR=/Volumes/scratch/mousevision
+Those files are regenerated from the local Allen cache; the numbers in them come from
+the eight experiments above, so they are one Cre line at one depth, not a population
+estimate. Key figures land in `docs/figures/`:
+
+- `decoding_vs_n.png` — accuracy rises with neuron count in every area and more cells
+  buy more accuracy, but areas differ at a common neuron count.
+- `rsa_heatmap.png` — CNN layer vs area similarity, annotated with rho / ceiling and
+  `p < 0.05` markers.
+- `layer_area_map.png` — encoding R2 as a fraction of the noise ceiling per area and
+  layer.
+- `hierarchy.png` — per-area layer centroid against the assumed area order.
+- `tuning_examples.png`, `osi_dsi_hist.png`, `rf_examples.png` — example cells and
+  population tuning summaries.
+
+Nothing here is a claim about mouse vision in general; treat the hierarchy test as
+exploratory.
+
+## Limitations
+
+- dF/F from calcium imaging, not spikes: slow, non-linear, and correlated across
+  neighbouring cells.
+- About 130-330 neurons per area, from one Cre line (`Cux2-CreERT2`) at one imaging
+  depth (175 um) in one animal per area.
+- One model: ImageNet-trained ResNet-18. No architecture or training-set comparison.
+- The area hierarchy `VISp, VISl, VISrl, VISal, VISpm, VISam` is an assumption from
+  Harris et al. 2019 and Siegle et al. 2021, not something this repo measures; the
+  permutation test only asks whether the data agree with that fixed order.
+- Noise ceilings are estimated by split-half reliability, which is itself noisy at this
+  sample size.
+- Statistics are deliberately simple (5-fold CV, fixed alpha grids, 200-1000
+  permutations) and can be tightened.
+
+## Conventions and formulas
+
+Response per cell `c` and trial `k` (frames are 2-photon frames, ~30 Hz, half-open):
+
+```
+response[c, k] = mean(dff[c, start_k + 4 : end_k + 4]) - mean(dff[c, start_k - 30 : start_k])
 ```
 
-The cache then lives at `$MV_DATA_DIR/raw/allen_cache`. Small derived `.npz` features
-under `data/features/` are committed.
+`LAG_FRAMES = 4` (~133 ms) accounts for the GCaMP6f lag; `BASELINE_FRAMES = 30` (1 s)
+is the pre-stimulus baseline.
 
-Fetch the frozen core set (8 experiments, ~3.2 GB; idempotent — a re-run skips
-complete files and repairs truncated ones) and build the response matrices:
+Tuning, at each cell's preferred direction/TF: `OSI = (pref - orth) / (pref + orth)` and
+`DSI = (pref - null) / (pref + null)`; responses can be negative, so these are not
+clipped to [-1, 1].
 
-```bash
-uv run python scripts/download.py          # --dry-run to preview, --all for every session
-uv run python scripts/build_responses.py   # 8 response sets under data/interim/responses/
-```
+RSA uses correlation distances `RDM[i, j] = 1 - Pearson(r_i, r_j)` and Spearman rho over
+the upper triangle. Reliability is the Spearman-Brown ceiling
+`ceiling = 2 r_half / (1 + r_half)` from split-half RDMs. Encoding reports
+`R2 = 1 - SSE/SST` and `r2 / ceiling` per neuron, and layer centroids are
+`sum(i * max(s_i, 0)) / sum(max(s_i, 0))` over layers 1..4. Permutation p-values use
+`p = (1 + #null >= observed) / (1 + n_perm)`.
 
 ## Versions
 
 Python 3.11 is the newest interpreter that allensdk 2.16.2 supports and that still has
-torch wheels for macOS `x86_64`: torch 2.2.2 / torchvision 0.17.2 are the last
-releases shipping Intel-Mac wheels (`cp311-none-macosx_10_9_x86_64`). allensdk pins its
-own old stack (numpy<1.24, pandas==1.5.3, scipy<1.11), and `setuptools<81` keeps
-`pkg_resources` available for it. Full table: [`docs/VERSIONS.md`](docs/VERSIONS.md).
-
-## Brains vs CNNs: RSA
-
-```bash
-uv sync --locked --group dev --extra cnn   # once, on the Intel Mac
-uv run python scripts/extract_features.py  # caches data/features/resnet18_ns.npz
-uv run python scripts/run_rsa.py
-```
-
-ImageNet ResNet-18 activations (layer1..layer4, average-pooled 1x1 or 2x2) are compared
-with each area's natural-scene response RDM. Distances are correlation distances,
-`RDM[i, j] = 1 - Pearson(r_i, r_j)` (Kriegeskorte et al. 2008), and similarity is
-Spearman rho over the upper triangle only. Reliability comes from split-half RDMs:
-`r_half = mean rho(rdm(A), rdm(B))` and the Spearman-Brown ceiling
-`ceiling = 2 r_half / (1 + r_half)`. Significance permutes model image labels, moving
-rows and columns together, with `p = (1 + #null >= rho) / (1 + n_perm)`.
-
-## Decoding
-
-```bash
-uv run python scripts/run_decoding.py
-```
-
-Image identity from population dF/F: multinomial logistic regression (`C=0.01`) on
-standardised responses, 5-fold stratified CV with the scaler fit inside each fold, so
-nothing leaks. Chance is `1/118`. Accuracy is reported against neuron count per area
-(random subsets, 10 draws) plus a permutation test at a common neuron count and a PCA
-participation ratio over the 118 trial-averaged image vectors.
-
-## Tuning & RFs
-
-```bash
-uv run python scripts/run_tuning_rf.py
-```
-
-Writes `results/tuning_VISp.npz`, `results/rf_VISp.npz` and the tuning/RF figures.
-OSI and DSI follow the Allen definitions at each cell's preferred direction and temporal
-frequency: `OSI = (pref - orth) / (pref + orth)` with `orth` the mean of the two
-orthogonal directions, and `DSI = (pref - null) / (pref + null)` with `null` the
-opposite direction. Responses are mean dF/F over `[start+4, end+4)` frames minus the
-1 s pre-stimulus baseline, so OSI/DSI are not clipped and can fall outside [-1, 1].
-Receptive fields are spike-triggered averages of z-scored responses over locally sparse
-noise trials; significance compares the max-pixel z against shuffled trial labels.
-
-## Encoding & hierarchy
-
-```bash
-uv run python scripts/run_encoding.py
-```
-
-Ridge regression from 2x2-pooled ResNet-18 layer activations to each neuron's
-image-mean response, with the feature scaler, the PCA (50 components) and the per-neuron
-ridge alpha (inner 5-fold) all fit inside the outer folds. Neurons are kept when their
-split-half ceiling is at least 0.3. R^2 is reported both raw and as a fraction of that
-ceiling (`r2/ceiling`). Per-area layer centroids are
-`sum(i * max(s_i, 0)) / sum(max(s_i, 0))` over layers 1..4, tested against the assumed
-anatomical order `VISp, VISl, VISrl, VISal, VISpm, VISam` with an exact permutation test
-over all 720 orderings (one-sided, identity included).
+torch wheels for macOS x86_64. torch 2.2.2 / torchvision 0.17.2 are the last releases
+shipping Intel-Mac wheels; allensdk pins its own old stack (numpy 1.23.5, pandas 1.5.3,
+scipy 1.10.1) and `setuptools<81` keeps `pkg_resources` available. The resolver is
+frozen with `exclude-newer = 2024-06-01`. Full table and the pin-change rule:
+[`docs/VERSIONS.md`](docs/VERSIONS.md).
 
 ## Citation
 
 Allen Institute for Brain Science. Allen Brain Observatory — Visual Coding 2-photon.
 Available from: https://observatory.brain-map.org/visualcoding
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).
