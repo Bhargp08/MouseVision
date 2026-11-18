@@ -1,0 +1,30 @@
+name: mac-intel-check
+
+# Manual check of Bharg's Intel-Mac install path (torch wheels). Not run on push.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  install:
+    name: torch + allensdk on Intel macOS
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install Python 3.11
+        run: uv python install 3.11
+
+      - name: Sync with the cnn extra
+        run: uv sync --locked --group dev --extra cnn
+
+      - name: Import the full stack
+        run: >
+          uv run python -c "import torch, torchvision, allensdk;
+          from allensdk.core.brain_observatory_cache import BrainObservatoryCache;
+          print(torch.__version__, torchvision.__version__, allensdk.__version__)"
