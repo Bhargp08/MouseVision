@@ -15,8 +15,8 @@ Core environment (no torch):
 uv sync --locked --group dev
 ```
 
-Add the CNN extras (torch 2.2.2 + torchvision 0.17.2, macOS Intel) — needed for MV-04
-feature extraction:
+Adds torch 2.2.2 + torchvision 0.17.2: macOS Intel (x86_64) wheels on darwin, CPU-only
+wheels on linux; needed only for MV-04 feature extraction:
 
 ```bash
 uv sync --locked --group dev --extra cnn
@@ -42,6 +42,14 @@ export MV_DATA_DIR=/Volumes/scratch/mousevision
 
 The cache then lives at `$MV_DATA_DIR/raw/allen_cache`. Small derived `.npz` features
 under `data/features/` are committed.
+
+Fetch the frozen core set (8 experiments, ~3.2 GB; idempotent — a re-run skips
+complete files and repairs truncated ones) and build the response matrices:
+
+```bash
+uv run python scripts/download.py          # --dry-run to preview, --all for every session
+uv run python scripts/build_responses.py   # 8 response sets under data/interim/responses/
+```
 
 ## Versions
 

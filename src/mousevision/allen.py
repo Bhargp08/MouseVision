@@ -14,7 +14,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from allensdk.core.brain_observatory_cache import BrainObservatoryCache
 
 
-def make_cache(manifest: str | Path | None = None) -> "BrainObservatoryCache":
+def make_cache(manifest: str | Path | None = None) -> BrainObservatoryCache:
     """Build a BrainObservatoryCache pointed at the local manifest.
 
     Constructing the cache does not touch the network; it only creates the

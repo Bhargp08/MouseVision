@@ -1,16 +1,13 @@
 # Status
 
-MV-00 in progress
-
-Last update: MV-00 implementation pushed on `mv/MV-00-scaffold` (PR #1). CI green,
-awaiting Cursor review. Nothing merged.
+MV-00 done (merged 4556bae); MV-01 in progress
 
 | Unit | Scope | Status |
 | --- | --- | --- |
-| MV-00 | Repo scaffold, pinned uv env, CI, data cache config | in progress |
-| MV-01 | TBD (not yet specified) | not started |
-| MV-02 | TBD (not yet specified) | not started |
-| MV-03 | TBD (not yet specified) | not started |
-| MV-04 | CNN feature extraction (uses the `cnn` extra: torch 2.2.2 + torchvision 0.17.2) | not started |
-| MV-05 | TBD (not yet specified) | not started |
-| MV-06 | TBD (not yet specified) | not started |
+| MV-00 | Repo scaffold, pinned uv env, CI, data cache config | done (4556bae) |
+| MV-01 | Download script + per-trial response matrices | in progress |
+| MV-02 | VISp tuning (OSI/DSI) + LSN receptive fields | not started |
+| MV-03 | Natural-scene decoding vs neuron count per area | not started |
+| MV-04 | ResNet-18 features + RSA with noise ceilings | not started |
+| MV-05 | Ridge encoding + layer-area hierarchy test | not started |
+| MV-06 | Streamlit explorer, figure set, README | not started |
