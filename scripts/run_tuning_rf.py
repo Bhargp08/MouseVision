@@ -97,15 +97,17 @@ def main(argv=None):
     curves = tuning.osi_dsi(means)
     flags = tuning.responsive(dg)
 
+    # Keys are fixed by the app contract: cell_ids, M, osi, dsi, pref_dir, pref_tf,
+    # responsive.
     np.savez_compressed(
         RESULTS_DIR / "tuning_VISp.npz",
+        cell_ids=np.asarray(dg["cell_specimen_ids"], dtype=np.int64),
         M=means,
-        directions=directions,
-        temporal_frequencies=temporal_frequencies,
-        blank_mean=blank_mean,
+        osi=curves["osi"],
+        dsi=curves["dsi"],
+        pref_dir=curves["pref_dir_deg"],
+        pref_tf=curves["pref_tf_hz"],
         responsive=flags,
-        cell_specimen_ids=np.asarray(dg["cell_specimen_ids"], dtype=np.int64),
-        **curves,
     )
 
     polar_examples(means, curves, flags, directions, FIGURES_DIR / "tuning_examples.png")
@@ -117,11 +119,11 @@ def main(argv=None):
     )
     np.savez_compressed(
         RESULTS_DIR / "rf_VISp.npz",
+        cell_ids=np.asarray(lsn["cell_specimen_ids"], dtype=np.int64),
         z_on=significance["z_on"].astype(np.float16),
         z_off=significance["z_off"].astype(np.float16),
         sig_on=significance["sig_on"],
         sig_off=significance["sig_off"],
-        cell_specimen_ids=np.asarray(lsn["cell_specimen_ids"], dtype=np.int64),
     )
     rf_examples(significance, FIGURES_DIR / "rf_examples.png")
 
