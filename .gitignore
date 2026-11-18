@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Raw and intermediate data are never committed
+data/raw/
+data/interim/
+*.nwb
+*.h5
+
+# Notebooks
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Streamlit
+.streamlit/secrets.toml
