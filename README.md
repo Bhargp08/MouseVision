@@ -59,6 +59,22 @@ releases shipping Intel-Mac wheels (`cp311-none-macosx_10_9_x86_64`). allensdk p
 own old stack (numpy<1.24, pandas==1.5.3, scipy<1.11), and `setuptools<81` keeps
 `pkg_resources` available for it. Full table: [`docs/VERSIONS.md`](docs/VERSIONS.md).
 
+## Brains vs CNNs: RSA
+
+```bash
+uv sync --locked --group dev --extra cnn   # once, on the Intel Mac
+uv run python scripts/extract_features.py  # caches data/features/resnet18_ns.npz
+uv run python scripts/run_rsa.py
+```
+
+ImageNet ResNet-18 activations (layer1..layer4, average-pooled 1x1 or 2x2) are compared
+with each area's natural-scene response RDM. Distances are correlation distances,
+`RDM[i, j] = 1 - Pearson(r_i, r_j)` (Kriegeskorte et al. 2008), and similarity is
+Spearman rho over the upper triangle only. Reliability comes from split-half RDMs:
+`r_half = mean rho(rdm(A), rdm(B))` and the Spearman-Brown ceiling
+`ceiling = 2 r_half / (1 + r_half)`. Significance permutes model image labels, moving
+rows and columns together, with `p = (1 + #null >= rho) / (1 + n_perm)`.
+
 ## Decoding
 
 ```bash
