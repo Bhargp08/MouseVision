@@ -59,6 +59,18 @@ releases shipping Intel-Mac wheels (`cp311-none-macosx_10_9_x86_64`). allensdk p
 own old stack (numpy<1.24, pandas==1.5.3, scipy<1.11), and `setuptools<81` keeps
 `pkg_resources` available for it. Full table: [`docs/VERSIONS.md`](docs/VERSIONS.md).
 
+## Decoding
+
+```bash
+uv run python scripts/run_decoding.py
+```
+
+Image identity from population dF/F: multinomial logistic regression (`C=0.01`) on
+standardised responses, 5-fold stratified CV with the scaler fit inside each fold, so
+nothing leaks. Chance is `1/118`. Accuracy is reported against neuron count per area
+(random subsets, 10 draws) plus a permutation test at a common neuron count and a PCA
+participation ratio over the 118 trial-averaged image vectors.
+
 ## Tuning & RFs
 
 ```bash
