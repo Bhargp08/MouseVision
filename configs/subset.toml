@@ -1,0 +1,18 @@
+cre_line = "Cux2-CreERT2"
+imaging_depth = 175
+areas = ["VISp", "VISl", "VISal", "VISpm", "VISam", "VISrl"]
+
+[containers]
+VISp = 511510718
+VISl = 511510640
+VISal = 511510797
+VISpm = 511510822
+VISam = 565216521
+VISrl = 569645688
+
+# session B (natural scenes) for all areas + VISp sessions A (drifting gratings)
+# and C (locally sparse noise), about 3.2 GB
+[core_experiments]
+natural_scenes = [510345479, 502526200, 501889084, 503772253, 568775666, 569722788]
+drifting_gratings_VISp = 510514474
+locally_sparse_noise_VISp = 510174759
