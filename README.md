@@ -59,6 +59,21 @@ releases shipping Intel-Mac wheels (`cp311-none-macosx_10_9_x86_64`). allensdk p
 own old stack (numpy<1.24, pandas==1.5.3, scipy<1.11), and `setuptools<81` keeps
 `pkg_resources` available for it. Full table: [`docs/VERSIONS.md`](docs/VERSIONS.md).
 
+## Tuning & RFs
+
+```bash
+uv run python scripts/run_tuning_rf.py
+```
+
+Writes `results/tuning_VISp.npz`, `results/rf_VISp.npz` and the tuning/RF figures.
+OSI and DSI follow the Allen definitions at each cell's preferred direction and temporal
+frequency: `OSI = (pref - orth) / (pref + orth)` with `orth` the mean of the two
+orthogonal directions, and `DSI = (pref - null) / (pref + null)` with `null` the
+opposite direction. Responses are mean dF/F over `[start+4, end+4)` frames minus the
+1 s pre-stimulus baseline, so OSI/DSI are not clipped and can fall outside [-1, 1].
+Receptive fields are spike-triggered averages of z-scored responses over locally sparse
+noise trials; significance compares the max-pixel z against shuffled trial labels.
+
 ## Citation
 
 Allen Institute for Brain Science. Allen Brain Observatory — Visual Coding 2-photon.
