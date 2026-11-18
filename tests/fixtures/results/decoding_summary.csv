@@ -1,0 +1,7 @@
+area,n_cells,acc_all,acc_at_common_n,perm_p,participation_ratio
+VISp,180,0.32,0.26,0.001,12.5
+VISl,150,0.29,0.24,0.002,11.0
+VISal,120,0.27,0.23,0.003,10.2
+VISpm,95,0.24,0.21,0.004,8.8
+VISam,80,0.22,0.19,0.006,8.1
+VISrl,70,0.2,0.18,0.01,7.4
